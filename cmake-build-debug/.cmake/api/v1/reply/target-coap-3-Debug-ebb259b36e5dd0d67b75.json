@@ -1,0 +1,484 @@
+{
+	"archive" : {},
+	"artifacts" : 
+	[
+		{
+			"path" : "libcoap-3.a"
+		}
+	],
+	"backtrace" : 1,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_library",
+			"install",
+			"target_compile_options",
+			"target_include_directories",
+			"target_sources"
+		],
+		"files" : 
+		[
+			"CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 26,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 668,
+				"parent" : 0
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 527,
+				"parent" : 0
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 507,
+				"parent" : 0
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 450,
+				"parent" : 0
+			}
+		]
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "-g -fdiagnostics-color=always"
+				},
+				{
+					"backtrace" : 3,
+					"fragment" : "-DLIBCOAP_PACKAGE_BUILD=\\\"4.3.1\\\""
+				}
+			],
+			"includes" : 
+			[
+				{
+					"backtrace" : 4,
+					"path" : "/home/rodri/Documents/TFG/libcoap-proxy-TFG/cmake-build-debug"
+				},
+				{
+					"backtrace" : 4,
+					"path" : "/home/rodri/Documents/TFG/libcoap-proxy-TFG/cmake-build-debug/include"
+				},
+				{
+					"backtrace" : 4,
+					"path" : "/home/rodri/Documents/TFG/libcoap-proxy-TFG/include"
+				}
+			],
+			"language" : "C",
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23
+			]
+		}
+	],
+	"id" : "coap-3::@6890427a1f51a3e7e1df",
+	"install" : 
+	{
+		"destinations" : 
+		[
+			{
+				"backtrace" : 2,
+				"path" : "lib"
+			}
+		],
+		"prefix" : 
+		{
+			"path" : "/usr/local"
+		}
+	},
+	"name" : "coap-3",
+	"nameOnDisk" : "libcoap-3.a",
+	"paths" : 
+	{
+		"build" : ".",
+		"source" : "."
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Source Files",
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23
+			]
+		},
+		{
+			"name" : "Header Files",
+			"sourceIndexes" : 
+			[
+				24,
+				25,
+				26,
+				27,
+				28,
+				29,
+				30,
+				31,
+				32,
+				33,
+				34,
+				35,
+				36,
+				37,
+				38,
+				39,
+				40,
+				41,
+				42,
+				43,
+				44,
+				45,
+				46,
+				47,
+				48,
+				49
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 0,
+			"path" : "src/coap_address.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 0,
+			"path" : "src/coap_asn1.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 0,
+			"path" : "src/coap_async.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 0,
+			"path" : "src/coap_cache.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 0,
+			"path" : "src/coap_debug.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 0,
+			"path" : "src/coap_event.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 0,
+			"path" : "src/coap_hashkey.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 0,
+			"path" : "src/coap_io.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 0,
+			"path" : "src/coap_notls.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 0,
+			"path" : "src/coap_option.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 0,
+			"path" : "src/coap_prng.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 0,
+			"path" : "src/coap_session.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 0,
+			"path" : "src/coap_subscribe.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 0,
+			"path" : "src/coap_tcp.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 0,
+			"path" : "src/coap_time.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 0,
+			"path" : "src/block.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 0,
+			"path" : "src/encode.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 0,
+			"path" : "src/mem.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 0,
+			"path" : "src/net.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 0,
+			"path" : "src/pdu.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 0,
+			"path" : "src/resource.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 0,
+			"path" : "src/str.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 0,
+			"path" : "src/uri.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"compileGroupIndex" : 0,
+			"path" : "src/coap_openssl.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/coap.h.in",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/coap_address.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/coap_async.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/coap_cache.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/coap_debug.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/coap_dtls.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/coap_event.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/coap_hashkey.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/coap_io.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/coap_option.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/coap_prng.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/coap_session.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/coap_subscribe.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/coap_time.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/block.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/encode.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/libcoap.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/lwippools.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/mem.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/net.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/pdu.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/resource.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/str.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/uri.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/uthash.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 5,
+			"path" : "include/coap3/utlist.h",
+			"sourceGroupIndex" : 1
+		}
+	],
+	"type" : "STATIC_LIBRARY"
+}
