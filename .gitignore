@@ -114,3 +114,5 @@ CMakeLists.txt.user
 /out/
 /.vscode/
 /_build/
+
+cmake-build-debug
