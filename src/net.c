@@ -414,6 +414,8 @@ void coap_context_set_keepalive(coap_context_t *context, unsigned int seconds) {
   context->ping_timeout = seconds;
 }
 
+
+
 void
 coap_context_set_max_idle_sessions(coap_context_t *context,
                                    unsigned int max_idle_sessions) {
@@ -3466,6 +3468,8 @@ coap_register_nack_handler(coap_context_t *context,
   context->nack_handler = handler;
 }
 
+
+
 void
 coap_register_ping_handler(coap_context_t *context,
                            coap_ping_handler_t handler) {
@@ -3482,6 +3486,20 @@ void
 coap_register_option(coap_context_t *ctx, uint16_t type) {
   coap_option_filter_set(&ctx->known_options, type);
 }
+
+void
+coap_register_proxy_uri_resource(coap_context_t *ctx) {
+    static coap_resource_t proxy_resource;
+
+    static coap_str_const_t proxy_uri = { sizeof("coap://[::]:5684/time")-1,
+                                           (const uint8_t *)"coap://[::]:5684/time" };
+    memset(&proxy_resource, 0, sizeof(proxy_resource));
+    resource_uri_wellknown.handler[COAP_REQUEST_GET-1] = hnd_get_wellknown;
+    resource_uri_wellknown.flags = COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT;
+    resource_uri_wellknown.uri_path = &proxy_uri;
+
+}
+
 
 #if ! defined WITH_CONTIKI && ! defined WITH_LWIP && ! defined RIOT_VERSION
 #if COAP_SERVER_SUPPORT

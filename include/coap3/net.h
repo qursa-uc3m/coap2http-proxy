@@ -823,3 +823,6 @@ coap_read(coap_context_t *ctx, coap_tick_t now
 #define COAP_RUN_BLOCK COAP_RUN_BLOCK_deprecated_use_COAP_IO_WAIT
 
 #endif /* COAP_NET_H_ */
+
+void
+coap_register_proxy_uri_resource(coap_context_t *ctx);

@@ -1388,7 +1388,7 @@ setup_psk(
     memcpy(client_sni, uri.host.s,
            min(uri.host.length, sizeof(client_sni) - 1));
   else
-    memcpy(client_sni, "localhost", 9);
+        memcpy(client_sni, "localhost", 9);
   dtls_psk.client_sni = client_sni;
   dtls_psk.psk_info.identity.s = identity;
   dtls_psk.psk_info.identity.length = identity_len;
@@ -1738,6 +1738,8 @@ main(int argc, char **argv) {
   coap_register_response_handler(ctx, message_handler);
   coap_register_event_handler(ctx, event_handler);
   coap_register_nack_handler(ctx, nack_handler);
+
+
 
   dst.size = res;
   dst.addr.sin.sin_port = htons( port );

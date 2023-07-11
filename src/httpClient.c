@@ -8,7 +8,8 @@ int main(void){
 
     curl = curl_easy_init();
     if(curl){
-        curl_easy_setopt(curl, CURLOPT_URL, "http://0.0.0.0:8000/api/hello");
+        curl_easy_setopt(curl, CURLOPT_URL, "coap://[::1]/");
+        curl_easy_setopt(curl, CURLOPT_PROXY, "http://0.0.0.0:8000");
 
         res = curl_easy_perform(curl);
 
