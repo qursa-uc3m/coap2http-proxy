@@ -364,14 +364,17 @@ nack_handler(coap_session_t *session COAP_UNUSED,
     return;
 }
 
+
 /*
  * Response handler used for coap_send() responses
  */
 static coap_response_t
-message_handler(coap_session_t *session COAP_UNUSED,
+message_handler2(coap_session_t *session COAP_UNUSED,
                 const coap_pdu_t *sent,
                 const coap_pdu_t *received,
                 const coap_mid_t id COAP_UNUSED) {
+
+
 
     coap_opt_t *block_opt;
     coap_opt_iterator_t opt_iter;
@@ -467,6 +470,116 @@ message_handler(coap_session_t *session COAP_UNUSED,
                                               COAP_OPTION_OBSERVE, &opt_iter) == NULL : 1;
     return COAP_RESPONSE_OK;
 }
+
+
+const coap_pdu_t *received_response;
+
+/*
+ * Response handler used for coap_send() responses
+ */
+static coap_response_t
+message_handler(coap_session_t *session COAP_UNUSED,
+                const coap_pdu_t *sent,
+                const coap_pdu_t *received,
+                const coap_mid_t id COAP_UNUSED) {
+
+    received_response = received;
+
+    coap_opt_t *block_opt;
+    coap_opt_iterator_t opt_iter;
+    size_t len;
+    const uint8_t *databuf;
+    size_t offset;
+    size_t total;
+    coap_pdu_code_t rcv_code = coap_pdu_get_code(received);
+    coap_pdu_type_t rcv_type = coap_pdu_get_type(received);
+    coap_bin_const_t token = coap_pdu_get_token(received);
+
+    coap_log(LOG_DEBUG, "** process incoming %d.%02d response:\n",
+             COAP_RESPONSE_CLASS(rcv_code), rcv_code & 0x1F);
+    if (coap_get_log_level() < LOG_DEBUG)
+        coap_show_pdu(LOG_INFO, received);
+
+    /* check if this is a response to our original request */
+    if (!track_check_token(&token)) {
+        /* drop if this was just some message, or send RST in case of notification */
+        if (!sent && (rcv_type == COAP_MESSAGE_CON ||
+                      rcv_type == COAP_MESSAGE_NON)) {
+            /* Cause a CoAP RST to be sent */
+            return COAP_RESPONSE_FAIL;
+        }
+        return COAP_RESPONSE_OK;
+    }
+
+    if (rcv_type == COAP_MESSAGE_RST) {
+        coap_log(LOG_INFO, "got RST\n");
+        return COAP_RESPONSE_OK;
+    }
+
+    /* output the received data, if any */
+    if (COAP_RESPONSE_CLASS(rcv_code) == 2) {
+
+        /* set obs timer if we have successfully subscribed a resource */
+        if (doing_observe && !obs_started &&
+            coap_check_option(received, COAP_OPTION_OBSERVE, &opt_iter)) {
+            coap_log(LOG_DEBUG,
+                     "observation relationship established, set timeout to %d\n",
+                     obs_seconds);
+            obs_started = 1;
+            obs_ms = obs_seconds * 1000;
+            obs_ms_reset = 1;
+        }
+
+        if (coap_get_data_large(received, &len, &databuf, &offset, &total)) {
+            append_to_output(databuf, len);
+            if ((len + offset == total) && add_nl)
+                append_to_output((const uint8_t*)"\n", 1);
+        }
+
+        /* Check if Block2 option is set */
+        block_opt = coap_check_option(received, COAP_OPTION_BLOCK2, &opt_iter);
+        if (!single_block_requested && block_opt) { /* handle Block2 */
+
+            /* TODO: check if we are looking at the correct block number */
+            if (coap_opt_block_num(block_opt) == 0) {
+                /* See if observe is set in first response */
+                ready = doing_observe ? coap_check_option(received,
+                                                          COAP_OPTION_OBSERVE, &opt_iter) == NULL : 1;
+            }
+            if(COAP_OPT_BLOCK_MORE(block_opt)) {
+                doing_getting_block = 1;
+            }
+            else {
+                doing_getting_block = 0;
+                track_flush_token(&token);
+            }
+            return COAP_RESPONSE_OK;
+        }
+    } else {      /* no 2.05 */
+        /* check if an error was signaled and output payload if so */
+        if (COAP_RESPONSE_CLASS(rcv_code) >= 4) {
+            fprintf(stderr, "%d.%02d", COAP_RESPONSE_CLASS(rcv_code),
+                    rcv_code & 0x1F);
+            if (coap_get_data_large(received, &len, &databuf, &offset, &total)) {
+                fprintf(stderr, " ");
+                while(len--) {
+                    fprintf(stderr, "%c", isprint(*databuf) ? *databuf : '.');
+                    databuf++;
+                }
+            }
+            fprintf(stderr, "\n");
+        }
+
+    }
+    if (!is_mcast)
+        track_flush_token(&token);
+
+    /* our job is done, we can exit at any time */
+    ready = doing_observe ? coap_check_option(received,
+                                              COAP_OPTION_OBSERVE, &opt_iter) == NULL : 1;
+    return COAP_RESPONSE_OK;
+}
+
 
 static void
 usage( const char *program, const char *version) {
@@ -1487,6 +1600,7 @@ int main_coap_client(char *forwarded_uri,  char *forwarded_uri_method){
     static char addr[INET6_ADDRSTRLEN];
     void *addrptr = NULL;
     int result = -1;
+    repeat_count = 1;
     coap_pdu_t  *pdu;
     static coap_str_const_t server;
     uint16_t port = COAP_DEFAULT_PORT;
@@ -1767,21 +1881,23 @@ int main_coap_client(char *forwarded_uri,  char *forwarded_uri_method){
     }
     free(tracked_tokens);
     coap_delete_optlist(optlist);
+    optlist = NULL;
     coap_session_release( session );
-    coap_free_context( ctx );
+    //coap_free_context( ctx );
     coap_cleanup();
     close_output();
 
     return result;
 }
 
-
+/*
 static const char *s_backend_url =
 #if MG_ENABLE_MBEDTLS || MG_ENABLE_OPENSSL
         "https://cesanta.com";
 #else
         "http://info.cern.ch";
 #endif
+ */
 static const char *s_listen_url = "http://localhost:8000";
 /*
 // Forward client request to the backend connection, rewriting the Host header
@@ -1813,9 +1929,10 @@ static void fn2(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
         if (c2 != NULL) c2->fn_data = NULL;
     }
     (void) ev_data;
-}*/
-
-/*static void fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
+}
+*/
+/*
+static void fn3(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
     struct mg_connection *c2 = fn_data;
     if (ev == MG_EV_HTTP_MSG) {
         struct mg_http_message *hm = (struct mg_http_message *) ev_data;
@@ -1831,7 +1948,6 @@ static void fn2(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
             }
             c->fn_data = c2;
             forward_request(hm, c2);
-            c->is_resp = 0; // process further msgs in keep-alive connection
             c2->is_hexdumping = 1;
         }
     } else if (ev == MG_EV_CLOSE) {
@@ -1846,16 +1962,16 @@ static void fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
         size_t i, max = sizeof(hm->headers) / sizeof(hm->headers[0]);
 
         struct mg_str *method = &hm->method;
-        struct mg_str *uri = &hm->uri;
-/*
+        //struct mg_str *uri = &hm->uri;
+        struct mg_str *dest_uri;
+
         for (i = 0; i < max && hm->headers[i].name.len > 0; i++) {
             struct mg_str *k = &hm->headers[i].name, *v = &hm->headers[i].value;
-            if (mg_strcmp(*k, mg_str("Host")) == 0) host = v;
-            printf(c, "%.*s: %.*s\r\n", (int) k->len, k->ptr, (int) v->len, v->ptr);
-        }*/
+            if (mg_strcmp(*k, mg_str("Dest-Uri")) == 0) dest_uri = v;
+        }
 
 
-
+        /*
         char def_uri [uri->len +1];
         char *ptr = uri->ptr;
         def_uri[0] = *(uri->ptr);
@@ -1863,6 +1979,15 @@ static void fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
             def_uri[j] = *(++ptr);
         }
         def_uri[uri->len] = '\0';
+        */
+
+        char def_dest_uri [dest_uri->len +1];
+        char *ptr = dest_uri->ptr;
+        def_dest_uri[0] = *(dest_uri->ptr);
+        for (int j = 1; j < dest_uri->len; j++){
+            def_dest_uri[j] = *(++ptr);
+        }
+        def_dest_uri[dest_uri->len] = '\0';
 
         char def_method [method->len + 1];
         char *m_ptr = method->ptr;
@@ -1871,10 +1996,29 @@ static void fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
             def_method[j] = *(++m_ptr);
         }
         def_method[method->len] = '\0';
-        char *test1 = def_method;
-        char *test = def_uri;
 
-        main_coap_client(def_uri, def_method);
+        char *test1 = def_method;
+        char *test2 = def_dest_uri;
+
+
+
+        main_coap_client(def_dest_uri, def_method);
+
+        size_t len;
+        const uint8_t *databuf;
+        size_t offset;
+        size_t total;
+
+        coap_pdu_code_t rcv_code = coap_pdu_get_code(received_response);
+        unsigned char processed_code =  (((rcv_code) >> 5) & 0xFF);
+        coap_pdu_type_t rcv_type = coap_pdu_get_type(received_response);
+        coap_bin_const_t token = coap_pdu_get_token(received_response);
+        coap_get_data_large(received_response, &len, &databuf, &offset, &total);
+        COAP_RESPONSE_CLASS(rcv_code);
+        mg_http_reply(c, 200, "Content-Type: text/plain\r\n", "%.*s",(int)len, databuf);
+    }else if (ev == MG_EV_CLOSE) {
+        if (c != NULL) c->is_closing = 1;
+        if (c != NULL) c->fn_data = NULL;
     }
 }
 
@@ -1885,7 +2029,7 @@ int main(void) {
 
     mg_log_set(MG_LL_DEBUG);                       // Set log level
     mg_mgr_init(&mgr);                             // Initialise event manager
-    mg_http_listen(&mgr, s_listen_url, fn, &mgr);  // Start proxy
+    mg_http_listen(&mgr, s_listen_url, fn, NULL);  // Start proxy
     for (;;) mg_mgr_poll(&mgr, 1000);              // Event loop
     mg_mgr_free(&mgr);
 

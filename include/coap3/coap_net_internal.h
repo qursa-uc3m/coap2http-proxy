@@ -59,6 +59,8 @@ struct coap_context_t {
   coap_resource_release_userdata_handler_t release_userdata;
                                         /**< function to release user_data
                                              when resource is deleted */
+  coap_pdu_t *received_pdu; /**< To obtain the response pdu through response_handler in order to
+                                * be able to manage pdu response out of the response_handler scope */
 #endif /* COAP_SERVER_SUPPORT */
 
 #ifndef WITHOUT_ASYNC

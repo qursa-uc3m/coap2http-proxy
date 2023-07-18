@@ -473,7 +473,7 @@ target_sources(
         ${CMAKE_CURRENT_LIST_DIR}/src/str.c
         ${CMAKE_CURRENT_LIST_DIR}/src/uri.c
         ${CMAKE_CURRENT_LIST_DIR}/src/proxyServer.c
-        ${CMAKE_CURRENT_LIST_DIR}/src/httpServer.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/http2CoapServer.c
         # no need to parse those files if we do not need them
         $<$<BOOL:${HAVE_OPENSSL}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_openssl.c>
         $<$<BOOL:${HAVE_LIBTINYDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_tinydtls.c>
@@ -733,6 +733,6 @@ add_executable (httpClient src/httpClient.c)
 include_directories(${CURL_INCLUDE_DIR})
 target_link_libraries(httpClient ${CURL_LIBRARIES})
 
-add_executable (httpServer src/httpServer.c src/mongoose.c)
-target_link_libraries(httpServer
+add_executable (http2CoapServer src/http2CoapServer.c src/mongoose.c)
+target_link_libraries(http2CoapServer
         PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})

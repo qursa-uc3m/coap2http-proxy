@@ -3455,12 +3455,27 @@ void
 coap_register_response_handler(coap_context_t *context,
                                coap_response_handler_t handler) {
 #if COAP_CLIENT_SUPPORT
+
   context->response_handler = handler;
 #else /* ! COAP_CLIENT_SUPPORT */
   (void)context;
   (void)handler;
 #endif /* COAP_CLIENT_SUPPORT */
 }
+
+void coap_register_response_handler2(coap_context_t *context,
+                               coap_response_handler_t handler,
+                               coap_pdu_t *received_response) {
+#if COAP_CLIENT_SUPPORT
+
+        context->response_handler = handler;
+
+
+#else /* ! COAP_CLIENT_SUPPORT */
+        (void)context;
+  (void)handler;
+#endif /* COAP_CLIENT_SUPPORT */
+    }
 
 void
 coap_register_nack_handler(coap_context_t *context,
