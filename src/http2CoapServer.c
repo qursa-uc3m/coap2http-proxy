@@ -1886,7 +1886,6 @@ int main_coap_client(char *forwarded_uri,  char *forwarded_uri_method){
     //coap_free_context( ctx );
     coap_cleanup();
     close_output();
-
     return result;
 }
 

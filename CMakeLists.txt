@@ -536,9 +536,11 @@ add_library(
         ALIAS
         ${COAP_LIBRARY_NAME})
 
+find_package(CURL REQUIRED)
+
 add_executable(proxyServer ${CMAKE_CURRENT_LIST_DIR}/src/proxyServer.c)
-target_link_libraries(proxyServer
-        PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
+target_link_libraries(proxyServer PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
+target_link_libraries(proxyServer PUBLIC ${CURL_LIBRARIES})
 #
 # compiler options
 #
@@ -728,11 +730,12 @@ if(ENABLE_EXAMPLES)
     endif()
 endif()
 
-find_package(CURL REQUIRED)
+
 add_executable (httpClient src/httpClient.c)
 include_directories(${CURL_INCLUDE_DIR})
 target_link_libraries(httpClient ${CURL_LIBRARIES})
 
-add_executable (http2CoapServer src/http2CoapServer.c src/mongoose.c)
+
+add_executable (http2CoapServer src/http2CoapServer.c)
 target_link_libraries(http2CoapServer
         PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
