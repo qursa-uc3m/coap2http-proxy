@@ -1257,6 +1257,13 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
             strcat(aux,host);
             char *host2 = aux;
 
+            char *path = NULL;
+            if(uri.path.length > 0){
+                char path_aux[uri.path.length + 1];
+                sprintf(path_aux,  uri.path.s);
+                path = path_aux;
+            }
+
             /* TODO establecer el metodo de la request. Por defecto GET */
 
 
@@ -1283,12 +1290,24 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
             }
 
             curl_easy_cleanup(curl);
+
+            /*Mapeamos y enviamos la respuesta al cliente coap*/
+
+            coap_pdu_set_code(response, COAP_RESPONSE_CODE(response_code));
+            coap_add_data_large_response(resource, session, request, response,
+                                         query, COAP_MEDIATYPE_TEXT_PLAIN, 1, 0,
+                                         chunk.size,
+                                         chunk.response, NULL, NULL);
+        } else{
+            coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
         }
 
         curl_global_cleanup();
 
 
-        /*Mapeamos y enviamos la respuesta al cliente coap*/
+
+
+
 
     }
     cleanup:
