@@ -1236,14 +1236,13 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
          */
         goto cleanup;
     } else {
-        /* TODO http & https */
+        /* TODO https */
 
         /*Mapeamos y enviamos la peticion al servidor http*/
         struct memory chunk = {0};
         CURL *curl;
         CURLcode res;
         curl_global_init(CURL_GLOBAL_ALL);
-
         curl = curl_easy_init();
         if(curl){
             char host [uri.host.length +1];
@@ -1253,20 +1252,52 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
                 host[j] = *(++ptr);
             }
             host[uri.host.length] = '\0';
+
             char aux[] = "http://";
             strcat(aux,host);
             char *host2 = aux;
 
-            char *path = NULL;
-            if(uri.path.length > 0){
-                char path_aux[uri.path.length + 1];
-                sprintf(path_aux,  uri.path.s);
-                path = path_aux;
+
+            /* Si hay path*/
+            if(uri.path.length != 0) {
+                char path[uri.path.length + 1];
+                char *ptr2 = uri.path.s;
+                path[0] = *(uri.path.s);
+                for (int j = 1; j < uri.path.length; j++) {
+                    path[j] = *(++ptr2);
+                }
+                path[uri.path.length] = '\0';
+                strcat(host2, "/");
+                strcat(host2, path);
             }
 
-            /* TODO establecer el metodo de la request. Por defecto GET */
+            /* Metodo de la peticion */
+            char * method;
+            switch(coap_pdu_get_code(request)){
+                case 1:
+                    method = "GET";
+                    break;
+                case 2:
+                    method = "POST";
+                    break;
+                case 3:
+                    method = "PUT";
+                    break;
+                case 4:
+                    method = "DELETE";
+                    break;
+                case 5:
+                    method = "FETCH";
+                    break;
+                case 6:
+                    method = "PATCH";
+                    break;
+                case 7:
+                    method = "IPATCH";
+                    break;
+            }
 
-
+            curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, method);
             /* send all data to this function  */
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, cb);
 
@@ -1282,10 +1313,11 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
             if(res != CURLE_OK){
                 fprintf(stderr, "curl_easy_perform() returned %s\n", curl_easy_strerror(res));
                 curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
-                sprintf(codestr, "%ld", response_code);
+
             }else {
+
                 curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
-                sprintf(codestr, "%ld", response_code);
+
 
             }
 
@@ -1294,10 +1326,12 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
             /*Mapeamos y enviamos la respuesta al cliente coap*/
 
             coap_pdu_set_code(response, COAP_RESPONSE_CODE(response_code));
-            coap_add_data_large_response(resource, session, request, response,
-                                         query, COAP_MEDIATYPE_TEXT_PLAIN, 1, 0,
-                                         chunk.size,
-                                         chunk.response, NULL, NULL);
+            if (response_code == 200 || response_code == 201) {
+                coap_add_data_large_response(resource, session, request, response,
+                                             query, COAP_MEDIATYPE_TEXT_PLAIN, 1, 0,
+                                             chunk.size,
+                                             chunk.response, NULL, NULL);
+            }
         } else{
             coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
         }

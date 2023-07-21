@@ -1,11 +1,4 @@
-// Copyright (c) 2020 Cesanta Software Limited
-// All rights reserved
-//
-// Example HTTP reverse proxy
-//    1. Run `make`. This builds and starts a proxy on port 8000
-//    2. Start your browser, go to https://localhost:8000
-//
-// To enable SSL/TLS, see https://mongoose.ws/tutorials/tls/#how-to-build
+
 
 #include "mongoose.h"
 #include <coap3/coap.h>

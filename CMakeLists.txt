@@ -736,6 +736,7 @@ include_directories(${CURL_INCLUDE_DIR})
 target_link_libraries(httpClient ${CURL_LIBRARIES})
 
 
-add_executable (http2CoapServer src/http2CoapServer.c)
+add_executable (http2CoapServer src/http2CoapServer.c src/mongoose.c)
+
 target_link_libraries(http2CoapServer
         PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})

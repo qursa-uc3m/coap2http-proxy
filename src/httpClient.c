@@ -11,13 +11,13 @@ int main(void){
         /*Custom headers to bypass schema restrictions*/
         struct curl_slist *chunk = NULL;
 
-        /* Add a custom header */
+        /* Add a custom header*/
         chunk = curl_slist_append(chunk, "Dest-Uri: coap://[::1]/time");
 
         /* set our custom set of headers */
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
-
-        curl_easy_setopt(curl, CURLOPT_URL, "http://0.0.0.0:8000");
+        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
+        curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:8000");
 
 
         res = curl_easy_perform(curl);
