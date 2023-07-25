@@ -1273,15 +1273,44 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
 
             /* Metodo de la peticion */
             char * method;
+            char * body;
             switch(coap_pdu_get_code(request)){
                 case 1:
                     method = "GET";
                     break;
                 case 2:
                     method = "POST";
+                    if (coap_get_data_large(request, &size, &data, &offset, &total)) {
+                        /* COAP_BLOCK_SINGLE_BODY is set, so single body should be given */
+                        assert(size == total);
+                        body_data = coap_new_binary(total);
+                        if (!body_data) {
+                            coap_log(LOG_DEBUG, "body build memory error\n");
+                            goto cleanup;
+                        }
+                        memcpy(body_data->s, data, size);
+                        data = body_data->s;
+                        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, size);
+                        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);
+
+                    }
                     break;
                 case 3:
                     method = "PUT";
+                    if (coap_get_data_large(request, &size, &data, &offset, &total)) {
+                        /* COAP_BLOCK_SINGLE_BODY is set, so single body should be given */
+                        assert(size == total);
+                        body_data = coap_new_binary(total);
+                        if (!body_data) {
+                            coap_log(LOG_DEBUG, "body build memory error\n");
+                            goto cleanup;
+                        }
+                        memcpy(body_data->s, data, size);
+                        data = body_data->s;
+                        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, size);
+                        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);
+
+                    }
                     break;
                 case 4:
                     method = "DELETE";

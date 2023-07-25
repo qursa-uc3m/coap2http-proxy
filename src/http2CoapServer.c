@@ -1586,7 +1586,7 @@ get_session(
     return session;
 }
 
-int main_coap_client(char *forwarded_uri,  char *forwarded_uri_method){
+int main_coap_client(char *forwarded_uri,  char *forwarded_uri_method, char * body){
     coap_context_t  *ctx = NULL;
     coap_session_t *session = NULL;
     coap_address_t dst;
@@ -1632,6 +1632,10 @@ int main_coap_client(char *forwarded_uri,  char *forwarded_uri_method){
     coap_dtls_set_log_level(log_level);
     coap_set_log_level(log_level);
 
+    if(body != NULL && strlen(body) > 0){
+        if (!cmdline_input(body, &payload))
+            payload.length = 0;
+    }
 
     if (cmdline_uri(forwarded_uri, create_uri_opts) < 0) {
         exit(1);
@@ -1956,12 +1960,22 @@ static void fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
         struct mg_str *method = &hm->method;
         //struct mg_str *uri = &hm->uri;
         struct mg_str *dest_uri;
-
+        char *body = NULL;
         for (i = 0; i < max && hm->headers[i].name.len > 0; i++) {
             struct mg_str *k = &hm->headers[i].name, *v = &hm->headers[i].value;
             if (mg_strcmp(*k, mg_str("Dest-Uri")) == 0) dest_uri = v;
         }
+        char body_aux [hm->body.len +1];
+        if(hm->body.len != 0){
 
+            char *body_ptr = hm->body.ptr;
+            body_aux[0] = *(hm->body.ptr);
+            for (int j = 1; j < hm->body.len; j++){
+                body_aux[j] = *(++body_ptr);
+            }
+            body_aux[hm->body.len] = '\0';
+            body = body_aux;
+        }
 
         /*
         char def_uri [uri->len +1];
@@ -1994,7 +2008,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
 
 
 
-        main_coap_client(def_dest_uri, def_method);
+        main_coap_client(def_dest_uri, def_method, body);
 
         size_t len;
         const uint8_t *databuf;
