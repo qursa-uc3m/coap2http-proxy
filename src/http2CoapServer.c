@@ -465,7 +465,12 @@ message_handler2(coap_session_t *session COAP_UNUSED,
 }
 
 
-const coap_pdu_t *received_response;
+coap_pdu_t *received_response;
+uint8_t * HTTPpayload;
+char * payloadHTTP;
+int response_code;
+char  HTTPheaders [1024];
+
 
 /*
  * Response handler used for coap_send() responses
@@ -475,15 +480,66 @@ message_handler(coap_session_t *session COAP_UNUSED,
                 const coap_pdu_t *sent,
                 const coap_pdu_t *received,
                 const coap_mid_t id COAP_UNUSED) {
-
-    received_response = received;
-
     coap_opt_t *block_opt;
     coap_opt_iterator_t opt_iter;
     size_t len;
     const uint8_t *databuf;
     size_t offset;
     size_t total;
+
+    received_response = received;
+
+    response_code = coap_pdu_get_code(received);
+
+    coap_opt_t *current_opt = coap_check_option(received,COAP_OPTION_MAXAGE, &opt_iter);
+    uint8_t *currentValue = coap_opt_value(current_opt);
+    int value = (char)*currentValue;
+    unsigned char prueba = (char)value;
+    char int_str[sizeof(int)];
+    sprintf(int_str, "%d", value);
+    //unsigned char * value_ptr = &value;
+    strcat(HTTPheaders,"Cache-Control: max-age=");
+    strcat(HTTPheaders,int_str);
+
+
+
+    strcat(HTTPheaders,"\r\n");
+
+    current_opt = coap_check_option(received,COAP_OPTION_CONTENT_FORMAT, &opt_iter);
+    if (current_opt != NULL){
+        strcat(HTTPheaders,", Content-Type: ");
+        currentValue = coap_opt_value(current_opt);
+        value = *currentValue;
+        unsigned char *value_ptr = &value;
+        strncat(HTTPheaders,currentValue, sizeof(value));
+        strcat(HTTPheaders,"\r\n");
+    }
+
+
+
+
+    size_t len2;
+    size_t offset2;
+    size_t total2;
+
+    coap_get_data_large(received_response, &len2, &HTTPpayload, &offset2, &total2);
+
+    char *body = NULL;
+    char body_aux [len2 +1];
+    if(len2 != 0){
+
+        char *body_ptr = HTTPpayload;
+        body_aux[0] = *(HTTPpayload);
+        for (int j = 1; j < len2; j++){
+            body_aux[j] = *(++body_ptr);
+        }
+        body_aux[len2] = '\0';
+        body = body_aux;
+    }
+    payloadHTTP = body;
+
+
+
     coap_pdu_code_t rcv_code = coap_pdu_get_code(received);
     coap_pdu_type_t rcv_type = coap_pdu_get_type(received);
     coap_bin_const_t token = coap_pdu_get_token(received);
@@ -524,6 +580,7 @@ message_handler(coap_session_t *session COAP_UNUSED,
         }
 
         if (coap_get_data_large(received, &len, &databuf, &offset, &total)) {
+            HTTPpayload = databuf;
             append_to_output(databuf, len);
             if ((len + offset == total) && add_nl)
                 append_to_output((const uint8_t*)"\n", 1);
@@ -1586,7 +1643,30 @@ get_session(
     return session;
 }
 
-int main_coap_client(char *forwarded_uri,  char *forwarded_uri_method, char * body){
+int addHeaderIfExistsInCoap(struct mg_str  headerName, char * value){
+    char * option;
+    if  (mg_strcmp(headerName, mg_str("If-Match")) == 0){
+        option = "1,";
+        strcat(option, value);
+        cmdline_option(option);
+    } else if (mg_strcmp(headerName, mg_str("ETag")) == 0){
+        option = "4,";
+        strcat(option, value);
+        cmdline_option(option);
+    }else if (mg_strcmp(headerName, mg_str("If-None-Match")) == 0){
+        option = "5,";
+        strcat(option, value);
+        cmdline_option(option);
+    } else if (mg_strcmp(headerName, mg_str("Cache-Control")) == 0){
+        option = "14,";
+        strcat(option, value);
+        cmdline_option(option);
+    } else return 0;
+
+    return 1;
+}
+
+int main_coap_client(char *forwarded_uri,  char *forwarded_uri_method, char * body, struct mg_http_header headers[], coap_pdu_t *response){
     coap_context_t  *ctx = NULL;
     coap_session_t *session = NULL;
     coap_address_t dst;
@@ -1643,6 +1723,40 @@ int main_coap_client(char *forwarded_uri,  char *forwarded_uri_method, char * bo
 
     method = cmdline_method(forwarded_uri_method);
 
+    /*Content-Type and Accept configuration*/
+    size_t max = sizeof(headers)/sizeof(headers[0]);
+
+    for (i = 0; i < max && headers[i].name.len > 0; i++) {
+        struct mg_str *k = &headers[i].name, *v = &headers[i].value;
+        char *contentType = NULL;
+        char content_aux [v->len +1];
+        if(v->len != 0){
+
+            char *content_ptr = v->ptr;
+            content_aux[0] = *(v->ptr);
+            for (int j = 1; j < v->len; j++){
+                content_aux[j] = *(++content_ptr);
+            }
+            content_aux[v->len] = '\0';
+            contentType = content_aux;
+        }
+
+        if (mg_strcmp(*k, mg_str("Content-Type")) == 0){
+            cmdline_content_type(contentType, COAP_OPTION_CONTENT_TYPE);
+        } else if (mg_strcmp(*k, mg_str("Accept")) == 0){
+            cmdline_content_type(contentType, COAP_OPTION_ACCEPT);
+
+        }else{
+            addHeaderIfExistsInCoap(*k, contentType);
+        }
+
+    }
+
+
+
+
+
+
     if (key_length < 0) {
         coap_log( LOG_CRIT, "Invalid pre-shared key specified\n" );
         goto finish;
@@ -1660,6 +1774,8 @@ int main_coap_client(char *forwarded_uri,  char *forwarded_uri_method, char * bo
 
     /* resolve destination address where server should be sent */
     res = resolve_address(&server, &dst.addr.sa);
+
+    //cmdline_content_type(headers[0], COAP_OPTION_ACCEPT);
 
     if (res < 0) {
         fprintf(stderr, "failed to resolve address\n");
@@ -1757,6 +1873,8 @@ int main_coap_client(char *forwarded_uri,  char *forwarded_uri_method, char * bo
                                  data_len))) {
         goto finish;
     }
+
+
 
     if (is_mcast && wait_seconds == DEFAULT_WAIT_TIME)
         /* Allow for other servers to respond within DEFAULT_LEISURE RFC7252 8.2 */
@@ -1880,9 +1998,12 @@ int main_coap_client(char *forwarded_uri,  char *forwarded_uri_method, char * bo
     coap_delete_optlist(optlist);
     optlist = NULL;
     coap_session_release( session );
+
+
     //coap_free_context( ctx );
     coap_cleanup();
     close_output();
+
     return result;
 }
 
@@ -1952,7 +2073,9 @@ static void fn3(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
     }
 }*/
 
-static void fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
+
+
+static void handle_request(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
     if (ev == MG_EV_HTTP_MSG) {
         struct mg_http_message *hm = (struct mg_http_message *) ev_data;
         size_t i, max = sizeof(hm->headers) / sizeof(hm->headers[0]);
@@ -1960,11 +2083,20 @@ static void fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
         struct mg_str *method = &hm->method;
         //struct mg_str *uri = &hm->uri;
         struct mg_str *dest_uri;
-        char *body = NULL;
+        struct mg_http_header headers[max];
+
+
+        struct mg_str *accept = NULL;
         for (i = 0; i < max && hm->headers[i].name.len > 0; i++) {
             struct mg_str *k = &hm->headers[i].name, *v = &hm->headers[i].value;
             if (mg_strcmp(*k, mg_str("Dest-Uri")) == 0) dest_uri = v;
+            else{
+                headers[i].name = hm->headers[i].name;
+                headers[i].value = hm->headers[i].value;
+            }
         }
+
+        char *body = NULL;
         char body_aux [hm->body.len +1];
         if(hm->body.len != 0){
 
@@ -2007,21 +2139,78 @@ static void fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
         char *test2 = def_dest_uri;
 
 
+        //coap_pdu_t *received_response2 = malloc(sizeof(received_response));
+        //coap_pdu_t *sendRequest = malloc(sizeof(received_response));
 
-        main_coap_client(def_dest_uri, def_method, body);
+        main_coap_client(def_dest_uri, def_method, body, headers,received_response);
 
         size_t len;
         const uint8_t *databuf;
         size_t offset;
         size_t total;
 
-        coap_pdu_code_t rcv_code = coap_pdu_get_code(received_response);
-        unsigned char processed_code =  (((rcv_code) >> 5) & 0xFF);
-        coap_pdu_type_t rcv_type = coap_pdu_get_type(received_response);
-        coap_bin_const_t token = coap_pdu_get_token(received_response);
+
+        char * response_phrase =  coap_response_phrase(response_code);
+        int response_class = COAP_RESPONSE_CLASS(response_code);
+
+
+
+
+        //coap_opt_iterator_t opt_iter;
+        //coap_opt_t *opt = coap_check_option(received_response, COAP_OPTION_URI_PATH, &opt_iter);
+
+
+
         coap_get_data_large(received_response, &len, &databuf, &offset, &total);
-        COAP_RESPONSE_CLASS(rcv_code);
-        mg_http_reply(c, 200, "Content-Type: text/plain\r\n", "%.*s",(int)len, databuf);
+        /*TODO pasar codigo respuesta de coap a http y Content-Type*/
+
+        int HTTPCode;
+        switch(response_class) {
+            case 2:
+                if (strcmp(response_phrase, "Created") == 0) {
+                    HTTPCode = 201;
+                } else if (strcmp(response_phrase, "Valid") == 0){
+                    HTTPCode = 202;
+                } else {
+                    HTTPCode = 200;
+                }
+               break;
+            case 4:
+                if (strcmp(response_phrase, "Unauthorized") == 0) {
+                    HTTPCode = 401;
+                } else if (strcmp(response_phrase, "Forbidden") == 0){
+                    HTTPCode = 403;
+                } else if (strcmp(response_phrase, "Not Found") == 0){
+                    HTTPCode = 404;
+                } else if (strcmp(response_phrase, "Method Not Allowed") == 0){
+                    HTTPCode = 405;
+                } else if (strcmp(response_phrase, "Not Acceptable") == 0){
+                    HTTPCode = 406;
+                }  else {
+                    HTTPCode = 400;
+                }
+                break;
+            case 5:
+                if (strcmp(response_phrase, "Not Implemented") == 0) {
+                    HTTPCode = 501;
+                } else if (strcmp(response_phrase, "Bad Gateway") == 0){
+                    HTTPCode = 502;
+                } else if (strcmp(response_phrase, "Service Unavailable") == 0){
+                    HTTPCode = 503;
+                } else if (strcmp(response_phrase, "Gateway Timeout") == 0){
+                    HTTPCode = 504;
+                } else if (strcmp(response_phrase, "Proxying Not Supported") == 0){
+                    HTTPCode = 505;
+                }  else if (strcmp(response_phrase, "Hop Limit Reached") == 0){
+                    HTTPCode = 508;
+                } else {
+                    HTTPCode = 500;
+                }
+                break;
+        }
+        mg_http_reply(c, HTTPCode, HTTPheaders,  payloadHTTP);
+
+
     }else if (ev == MG_EV_CLOSE) {
         if (c != NULL) c->is_closing = 1;
         if (c != NULL) c->fn_data = NULL;
@@ -2035,7 +2224,7 @@ int main(void) {
 
     mg_log_set(MG_LL_DEBUG);                       // Set log level
     mg_mgr_init(&mgr);                             // Initialise event manager
-    mg_http_listen(&mgr, s_listen_url, fn, NULL);  // Start proxy
+    mg_http_listen(&mgr, s_listen_url, handle_request, NULL);  // Start proxy
     for (;;) mg_mgr_poll(&mgr, 1000);              // Event loop
     mg_mgr_free(&mgr);
 

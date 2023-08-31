@@ -176,6 +176,8 @@ int coap_insert_node(coap_queue_t **queue, coap_queue_t *node);
  */
 int coap_delete_node(coap_queue_t *node);
 
+
+
 /**
  * Removes all items from given @p queue and frees the allocated storage.
  *
@@ -198,6 +200,9 @@ coap_queue_t *coap_new_node(void);
  * out.
  */
 unsigned int coap_adjust_basetime(coap_context_t *ctx, coap_tick_t now);
+
+
+
 
 /**
  * Returns the next pdu to send without removing from sendqeue.

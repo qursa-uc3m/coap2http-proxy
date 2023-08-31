@@ -1236,7 +1236,7 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
          */
         goto cleanup;
     } else {
-        /* TODO https */
+
 
         /*Mapeamos y enviamos la peticion al servidor http*/
         struct memory chunk = {0};
@@ -1326,6 +1326,9 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
                     break;
             }
 
+            /*OBTENEMOS LAS OPCIONES BASICAS Y LAS MAPEAMOS A LOS HEADERS*/
+
+
             curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, method);
             /* send all data to this function  */
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, cb);
@@ -1355,13 +1358,13 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
             /*Mapeamos y enviamos la respuesta al cliente coap*/
 
             coap_pdu_set_code(response, COAP_RESPONSE_CODE(response_code));
-            if (response_code == 200 || response_code == 201) {
+            if (response_code == 200 || response_code == 201 || response_code == 202 || response_code == 203 || response_code == 204) {
                 coap_add_data_large_response(resource, session, request, response,
                                              query, COAP_MEDIATYPE_TEXT_PLAIN, 1, 0,
                                              chunk.size,
                                              chunk.response, NULL, NULL);
             }
-        } else{
+        } else {
             coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
         }
 

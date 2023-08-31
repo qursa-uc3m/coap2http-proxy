@@ -87,6 +87,12 @@ typedef void (*coap_ping_handler_t)(coap_session_t *session,
                                     const coap_pdu_t *received,
                                     const coap_mid_t mid);
 
+
+
+int setReceivedResponse(coap_context_t *ctx, coap_pdu_t *received_pdu);
+
+coap_pdu_t *getReceivedResponse(coap_context_t *received_pdu);
+
 /**
  * Received Pong handler that is used as callback in coap_context_t.
  *
@@ -94,6 +100,7 @@ typedef void (*coap_ping_handler_t)(coap_session_t *session,
  * @param received The PDU that was received.
  * @param mid CoAP message ID.
  */
+
 typedef void (*coap_pong_handler_t)(coap_session_t *session,
                                     const coap_pdu_t *received,
                                     const coap_mid_t mid);

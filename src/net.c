@@ -261,6 +261,41 @@ coap_delete_all(coap_queue_t *queue) {
   coap_delete_node(queue);
 }
 
+
+
+int setReceivedResponse(coap_context_t *ctx, coap_pdu_t *received_pdu) {
+    if (ctx->received_pdu == NULL){
+        ctx->received_pdu = received_pdu;
+    }else {
+
+        ctx->received_pdu->code = received_pdu->code;
+        ctx->received_pdu->mid = received_pdu->mid;
+        ctx->received_pdu->type = received_pdu->type;
+        ctx->received_pdu->used_size = received_pdu->used_size;
+        ctx->received_pdu->token = received_pdu->token;
+        ctx->received_pdu->hdr_size = received_pdu->hdr_size;
+        ctx->received_pdu->data = received_pdu->data;
+        ctx->received_pdu->token_length = received_pdu->token_length;
+        ctx->received_pdu->max_size = received_pdu->max_size;
+        ctx->received_pdu->crit_opt = received_pdu->crit_opt;
+        ctx->received_pdu->alloc_size = received_pdu->alloc_size;
+        ctx->received_pdu->body_data = received_pdu->body_data;
+        ctx->received_pdu->body_length = received_pdu->body_length;
+        ctx->received_pdu->body_offset = received_pdu->body_offset;
+        ctx->received_pdu->body_total = received_pdu->body_total;
+        ctx->received_pdu->lg_xmit = received_pdu->lg_xmit;
+        ctx->received_pdu->max_hdr_size = received_pdu->max_hdr_size;
+        ctx->received_pdu->max_opt = received_pdu->max_opt;
+    }
+
+    return 1;
+}
+
+coap_pdu_t *getReceivedResponse(coap_context_t *ctx) {
+
+    return ctx->received_pdu;
+}
+
 coap_queue_t *
 coap_new_node(void) {
   coap_queue_t *node;

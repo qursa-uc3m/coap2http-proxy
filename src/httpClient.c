@@ -18,7 +18,11 @@ int main(void){
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
         curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
         curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:8000");
-
+        /*Para peticiones POST o PUT*/
+        /*
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, 12L);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "Mensaje 1");
+         */
 
         res = curl_easy_perform(curl);
 
