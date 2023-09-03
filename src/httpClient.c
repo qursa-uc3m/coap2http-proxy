@@ -12,24 +12,24 @@ int main(void){
         struct curl_slist *chunk = NULL;
 
         /* Add a custom header*/
-        chunk = curl_slist_append(chunk, "Dest-Uri: coap://[::1]/time");
+        chunk = curl_slist_append(chunk, "Dest-Uri: coap://[::1]/example_data");
 
         /* set our custom set of headers */
+        chunk = curl_slist_append(chunk, "Content-Type: text/plain; charset=UTF-8");
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
-        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
+        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
         curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:8000");
         /*Para peticiones POST o PUT*/
-        /*
         curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, 12L);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "Mensaje 1");
-         */
+
 
         res = curl_easy_perform(curl);
 
         if(res != CURLE_OK){
             fprintf(stderr, "curl_easy_perform() returned %s\n", curl_easy_strerror(res));
         }
-
+        curl_slist_free_all(chunk);
         curl_easy_cleanup(curl);
     }
 

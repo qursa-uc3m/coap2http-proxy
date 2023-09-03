@@ -68,7 +68,7 @@ static char* strndup(const char* s1, size_t n)
 
 #include <coap3/coap.h>
 #include <curl/curl.h>
-
+#include <curl/easy.h>
 
 #ifndef min
 #define min(a, b) ((a) < (b) ? (a) : (b))
@@ -1009,6 +1009,101 @@ static size_t cb(void *data, size_t size, size_t nmemb, void *clientp)
     return realsize;
 }
 
+char * getContentFormatFromCode(int code){
+    char * contentFormat;
+    switch (code) {
+        case 40:
+            contentFormat = "application/link-format";
+            break;
+        case 41:
+            contentFormat = "application/xml";
+            break;
+        case 42:
+            contentFormat = "application/octet-stream";
+            break;
+        case 43:
+            contentFormat = "application/rdf+xml";
+            break;
+        case 47:
+            contentFormat = "application/exi";
+            break;
+        case 50:
+            contentFormat = "application/json";
+            break;
+        case 60:
+            contentFormat = "application/cbor";
+            break;
+        case 61:
+            contentFormat = "application/cwt";
+            break;
+        default:
+            contentFormat = "text/plain; charset=utf-8";
+            break;
+
+    }
+    return contentFormat;
+
+}
+
+typedef struct {
+    unsigned char code;
+    const char *media_type;
+} content_type_t;
+static coap_optlist_t *optlistResponse = NULL;
+static void
+cmdline_content_type(char *arg, uint16_t key) {
+    static content_type_t content_types[] = {
+            {  0, "plain" },
+            {  0, "text/plain" },
+            {  0, "text/plain; charset=UTF-8" },
+            {  0, "text/html; charset=UTF-8" },
+            { 40, "link" },
+            { 40, "link-format" },
+            { 40, "application/link-format" },
+            { 41, "xml" },
+            { 41, "application/xml" },
+            { 42, "binary" },
+            { 42, "octet-stream" },
+            { 42, "application/octet-stream" },
+            { 47, "exi" },
+            { 47, "application/exi" },
+            { 50, "json" },
+            { 50, "application/json" },
+            { 60, "cbor" },
+            { 60, "application/cbor" },
+            { 255, NULL }
+    };
+
+    coap_optlist_t *node;
+    unsigned char i;
+    uint16_t value;
+    uint8_t buf[2];
+
+
+    if (isdigit((int)arg[0])) {
+        value = atoi(arg);
+    } else {
+        for (i=0;
+             content_types[i].media_type &&
+             strncmp(arg, content_types[i].media_type, strlen(arg)) != 0 ;
+             ++i)
+            ;
+
+        if (content_types[i].media_type) {
+            value = content_types[i].code;
+        } else {
+            coap_log(LOG_WARNING, "W: unknown content-format '%s'\n",arg);
+            return;
+        }
+    }
+
+    node = coap_new_optlist(key, coap_encode_var_safe(buf, sizeof(buf), value), buf);
+    if (node) {
+        coap_insert_optlist(&optlistResponse, node);
+    }
+}
+
+
 static void
 hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
               coap_session_t *session,
@@ -1244,22 +1339,23 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
         CURLcode res;
         curl_global_init(CURL_GLOBAL_ALL);
         curl = curl_easy_init();
-        if(curl){
-            char host [uri.host.length +1];
+        struct curl_slist *optionsToHeaders = NULL;
+        if(curl) {
+            char host[uri.host.length + 1];
             char *ptr = uri.host.s;
             host[0] = *(uri.host.s);
-            for (int j = 1; j < uri.host.length; j++){
+            for (int j = 1; j < uri.host.length; j++) {
                 host[j] = *(++ptr);
             }
             host[uri.host.length] = '\0';
 
             char aux[] = "http://";
-            strcat(aux,host);
+            strcat(aux, host);
             char *host2 = aux;
 
 
             /* Si hay path*/
-            if(uri.path.length != 0) {
+            if (uri.path.length != 0) {
                 char path[uri.path.length + 1];
                 char *ptr2 = uri.path.s;
                 path[0] = *(uri.path.s);
@@ -1272,9 +1368,9 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
             }
 
             /* Metodo de la peticion */
-            char * method;
-            char * body;
-            switch(coap_pdu_get_code(request)){
+            char *method;
+            char *body;
+            switch (coap_pdu_get_code(request)) {
                 case 1:
                     method = "GET";
                     break;
@@ -1293,6 +1389,12 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
                         curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, size);
                         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);
 
+                        char int_str[sizeof(unsigned long)];
+                        sprintf(int_str, "%lu ", size);
+                        char * contentLength = "Content-Length: ";
+                        strcat(contentLength,int_str);
+                        optionsToHeaders = curl_slist_append(optionsToHeaders, contentLength);
+
                     }
                     break;
                 case 3:
@@ -1310,6 +1412,11 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
                         curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, size);
                         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);
 
+                        char int_str[sizeof(unsigned long)];
+                        sprintf(int_str, "%lu ", size);
+                        char * contentLength = "Content-Length: ";
+                        strcat(contentLength,int_str);
+                        optionsToHeaders = curl_slist_append(optionsToHeaders, contentLength);
                     }
                     break;
                 case 4:
@@ -1326,15 +1433,59 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
                     break;
             }
 
+            uint8_t *currentValue;
+            coap_opt_t *current_opt = coap_check_option(request,COAP_OPTION_MAXAGE, &opt_iter);
+            if (current_opt != NULL){
+                currentValue = coap_opt_value(current_opt);
+                int value = (char)*currentValue;
+                char int_str[sizeof(int)];
+                sprintf(int_str, "%d", value);
+                //unsigned char * value_ptr = &value;
+                char * header = "Cache-Control: max-age=";
+                strcat(header,int_str);
+                optionsToHeaders = curl_slist_append(optionsToHeaders, header);
+            }
+
+            coap_opt_iterator_t opt_iter2;
+            coap_opt_t *current_opt2 = coap_check_option(request,COAP_OPTION_ACCEPT, &opt_iter2);
+            if (current_opt2 != NULL){
+                uint8_t *currentValue2 = coap_opt_value(current_opt2);
+                uint32_t opt_len = coap_opt_length(current_opt2);
+                int value = (char)*currentValue2;
+
+                char * contentFormat = getContentFormatFromCode(value);
+
+                char * header = "Content-Type: ";
+                strcat(header,contentFormat);
+                optionsToHeaders = curl_slist_append(optionsToHeaders, header);
+            }
+
+            coap_opt_iterator_t opt_iter3;
+            coap_opt_t *current_opt3 = coap_check_option(request,COAP_OPTION_ACCEPT, &opt_iter2);
+            if (current_opt3 != NULL){
+                uint8_t *currentValue3 = coap_opt_value(current_opt3);
+                uint32_t opt_len = coap_opt_length(current_opt3);
+                int value = (char)*currentValue3;
+
+                char * contentFormat = getContentFormatFromCode(value);
+
+                char * header = "Accept: ";
+                strcat(header,contentFormat);
+                optionsToHeaders = curl_slist_append(optionsToHeaders, header);
+            }
             /*OBTENEMOS LAS OPCIONES BASICAS Y LAS MAPEAMOS A LOS HEADERS*/
+            /*Custom headers to bypass schema restrictions*/
 
 
+
+            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, optionsToHeaders);
             curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, method);
             /* send all data to this function  */
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, cb);
 
+
             /* we pass our 'chunk' struct to the callback function */
-            curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &chunk);
 
             curl_easy_setopt(curl, CURLOPT_URL, host2);
 
@@ -1342,34 +1493,102 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
             res = curl_easy_perform(curl);
             long response_code;
             char codestr[3 + sizeof(char)];
-            if(res != CURLE_OK){
+            char * contentType;
+            if (res != CURLE_OK) {
                 fprintf(stderr, "curl_easy_perform() returned %s\n", curl_easy_strerror(res));
                 curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
 
-            }else {
+            } else {
 
                 curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
 
+                res = curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &contentType);
+                if(contentType != NULL){
+                    cmdline_content_type(contentType, COAP_OPTION_CONTENT_FORMAT);
+                    coap_add_optlist_pdu(response,optlistResponse);
+                }
 
             }
-
+            curl_slist_free_all(optionsToHeaders);
             curl_easy_cleanup(curl);
 
             /*Mapeamos y enviamos la respuesta al cliente coap*/
 
-            coap_pdu_set_code(response, COAP_RESPONSE_CODE(response_code));
-            if (response_code == 200 || response_code == 201 || response_code == 202 || response_code == 203 || response_code == 204) {
+
+
+            switch (response_code) {
+                case 200:
+                    if (strcmp(method, "DELETE") == 0) {
+                        coap_pdu_set_code(response, COAP_RESPONSE_CODE_DELETED);
+                    } else {
+                        coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
+                    }
+                    break;
+                case 201:
+                    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CREATED);
+                    break;
+                case 204:
+                    coap_pdu_set_code(response, COAP_RESPONSE_CODE_DELETED);
+                    break;
+                case 205:
+                    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
+                    break;
+                case 400:
+                    coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_REQUEST);
+                    break;
+                case 401:
+                    coap_pdu_set_code(response, COAP_RESPONSE_CODE_UNAUTHORIZED);
+                    break;
+                case 403:
+                    coap_pdu_set_code(response, COAP_RESPONSE_CODE_FORBIDDEN);
+                    break;
+                case 404:
+                    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
+                    break;
+                case 405:
+                    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_ALLOWED);
+                    break;
+                case 406:
+                    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_ACCEPTABLE);
+                    break;
+                case 415:
+                    coap_pdu_set_code(response, COAP_RESPONSE_CODE_UNSUPPORTED_CONTENT_FORMAT);
+                    break;
+                case 500:
+                    coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
+                    break;
+                case 501:
+                    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_IMPLEMENTED);
+                    break;
+                case 502:
+                    coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_GATEWAY);
+                    break;
+                case 503:
+                    coap_pdu_set_code(response, COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE);
+                    break;
+                case 504:
+                    coap_pdu_set_code(response, COAP_RESPONSE_CODE_GATEWAY_TIMEOUT);
+                    break;
+
+                default:
+                    coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
+            }
+
+
+
+
+
+
+            if (response_code == 200 || response_code == 201 || response_code == 202 || response_code == 203 ||
+                response_code == 204 || response_code == 205) {
                 coap_add_data_large_response(resource, session, request, response,
                                              query, COAP_MEDIATYPE_TEXT_PLAIN, 1, 0,
                                              chunk.size,
                                              chunk.response, NULL, NULL);
             }
-        } else {
-            coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
+
+            curl_global_cleanup();
         }
-
-        curl_global_cleanup();
-
 
 
 
@@ -1383,6 +1602,9 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
 }
 
 #endif /* SERVER_CAN_PROXY */
+
+
+
 
 typedef struct dynamic_resource_t {
     coap_string_t *uri_path;

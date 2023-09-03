@@ -466,11 +466,48 @@ message_handler2(coap_session_t *session COAP_UNUSED,
 
 
 coap_pdu_t *received_response;
+
 uint8_t * HTTPpayload;
 char * payloadHTTP;
 int response_code;
 char  HTTPheaders [1024];
 
+
+char * getContentFormatFromCode(int code){
+    char * contentFormat;
+    switch (code) {
+        case 40:
+            contentFormat = "application/link-format";
+            break;
+        case 41:
+            contentFormat = "application/xml";
+            break;
+        case 42:
+            contentFormat = "application/octet-stream";
+            break;
+        case 43:
+            contentFormat = "application/rdf+xml";
+            break;
+        case 47:
+            contentFormat = "application/exi";
+            break;
+        case 50:
+            contentFormat = "application/json";
+            break;
+        case 60:
+            contentFormat = "application/cbor";
+            break;
+        case 61:
+            contentFormat = "application/cwt";
+            break;
+        default:
+            contentFormat = "text/plain; charset=utf-8";
+            break;
+
+    }
+    return contentFormat;
+
+}
 
 /*
  * Response handler used for coap_send() responses
@@ -490,28 +527,34 @@ message_handler(coap_session_t *session COAP_UNUSED,
     received_response = received;
 
     response_code = coap_pdu_get_code(received);
-
+    uint8_t *currentValue;
     coap_opt_t *current_opt = coap_check_option(received,COAP_OPTION_MAXAGE, &opt_iter);
-    uint8_t *currentValue = coap_opt_value(current_opt);
-    int value = (char)*currentValue;
-    unsigned char prueba = (char)value;
-    char int_str[sizeof(int)];
-    sprintf(int_str, "%d", value);
-    //unsigned char * value_ptr = &value;
-    strcat(HTTPheaders,"Cache-Control: max-age=");
-    strcat(HTTPheaders,int_str);
-
-
-
-    strcat(HTTPheaders,"\r\n");
-
-    current_opt = coap_check_option(received,COAP_OPTION_CONTENT_FORMAT, &opt_iter);
     if (current_opt != NULL){
-        strcat(HTTPheaders,", Content-Type: ");
         currentValue = coap_opt_value(current_opt);
-        value = *currentValue;
-        unsigned char *value_ptr = &value;
-        strncat(HTTPheaders,currentValue, sizeof(value));
+        int value = (char)*currentValue;
+        char int_str[sizeof(int)];
+        sprintf(int_str, "%d", value);
+        //unsigned char * value_ptr = &value;
+        strcat(HTTPheaders,"Cache-Control: max-age=");
+        strcat(HTTPheaders,int_str);
+
+
+
+        strcat(HTTPheaders,"\r\n");
+    }
+
+    coap_opt_iterator_t opt_iter2;
+    coap_opt_t *current_opt2 = coap_check_option(received,COAP_OPTION_CONTENT_FORMAT, &opt_iter2);
+    if (current_opt2 != NULL){
+        strcat(HTTPheaders,"Content-Type: ");
+        uint8_t *currentValue2 = coap_opt_value(current_opt2);
+        uint32_t opt_len = coap_opt_length(current_opt2);
+        int value = (char)*currentValue2;
+
+        char * contentFormat = getContentFormatFromCode(value);
+
+
+        strcat(HTTPheaders,contentFormat);
         strcat(HTTPheaders,"\r\n");
     }
 
@@ -782,6 +825,8 @@ cmdline_content_type(char *arg, uint16_t key) {
     static content_type_t content_types[] = {
             {  0, "plain" },
             {  0, "text/plain" },
+            {  0, "text/plain; charset=UTF-8" },
+                {  0, "text/html; charset=UTF-8" },
             { 40, "link" },
             { 40, "link-format" },
             { 40, "application/link-format" },
@@ -1666,7 +1711,7 @@ int addHeaderIfExistsInCoap(struct mg_str  headerName, char * value){
     return 1;
 }
 
-int main_coap_client(char *forwarded_uri,  char *forwarded_uri_method, char * body, struct mg_http_header headers[], coap_pdu_t *response){
+int main_coap_client(char *forwarded_uri,  char *forwarded_uri_method, char * body,  struct mg_http_message *hm, coap_pdu_t *response){
     coap_context_t  *ctx = NULL;
     coap_session_t *session = NULL;
     coap_address_t dst;
@@ -1724,10 +1769,10 @@ int main_coap_client(char *forwarded_uri,  char *forwarded_uri_method, char * bo
     method = cmdline_method(forwarded_uri_method);
 
     /*Content-Type and Accept configuration*/
-    size_t max = sizeof(headers)/sizeof(headers[0]);
+    size_t max = sizeof(hm->headers) / sizeof(hm->headers[0]);
 
-    for (i = 0; i < max && headers[i].name.len > 0; i++) {
-        struct mg_str *k = &headers[i].name, *v = &headers[i].value;
+    for (i = 0; i < max && hm->headers[i].name.len > 0; i++) {
+        struct mg_str *k = &hm->headers[i].name, *v = &hm->headers[i].value;
         char *contentType = NULL;
         char content_aux [v->len +1];
         if(v->len != 0){
@@ -2007,71 +2052,9 @@ int main_coap_client(char *forwarded_uri,  char *forwarded_uri_method, char * bo
     return result;
 }
 
-/*
-static const char *s_backend_url =
-#if MG_ENABLE_MBEDTLS || MG_ENABLE_OPENSSL
-        "https://cesanta.com";
-#else
-        "http://info.cern.ch";
-#endif
- */
+
 static const char *s_listen_url = "http://localhost:8000";
-/*
-// Forward client request to the backend connection, rewriting the Host header
-static void forward_request(struct mg_http_message *hm,
-                            struct mg_connection *c) {
-    size_t i, max = sizeof(hm->headers) / sizeof(hm->headers[0]);
-    struct mg_str host = mg_url_host(s_backend_url);
-    mg_printf(c, "%.*s\r\n",
-              (int) (hm->proto.ptr + hm->proto.len - hm->message.ptr),
-              hm->message.ptr);
-    for (i = 0; i < max && hm->headers[i].name.len > 0; i++) {
-        struct mg_str *k = &hm->headers[i].name, *v = &hm->headers[i].value;
-        if (mg_strcmp(*k, mg_str("Host")) == 0) v = &host;
-        mg_printf(c, "%.*s: %.*s\r\n", (int) k->len, k->ptr, (int) v->len, v->ptr);
-    }
-    mg_send(c, "\r\n", 2);
-    mg_send(c, hm->body.ptr, hm->body.len);
-    MG_DEBUG(("FORWARDING: %.*s %.*s", (int) hm->method.len, hm->method.ptr,
-            (int) hm->uri.len, hm->uri.ptr));
-}*/
-/*
-static void fn2(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
-    struct mg_connection *c2 = fn_data;
-    if (ev == MG_EV_READ) {
-        // All incoming data from the backend, forward to the client
-        if (c2 != NULL) mg_send(c2, c->recv.buf, c->recv.len);
-        mg_iobuf_del(&c->recv, 0, c->recv.len);
-    } else if (ev == MG_EV_CLOSE) {
-        if (c2 != NULL) c2->fn_data = NULL;
-    }
-    (void) ev_data;
-}
-*/
-/*
-static void fn3(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
-    struct mg_connection *c2 = fn_data;
-    if (ev == MG_EV_HTTP_MSG) {
-        struct mg_http_message *hm = (struct mg_http_message *) ev_data;
-        // Client request, create backend connection Note that we're passing
-        // client connection `c` as fn_data for the created backend connection.
-        c2 = mg_connect(c->mgr, s_backend_url, fn2, c);
-        if (c2 == NULL) {
-            mg_error(c, "Cannot create backend connection");
-        } else {
-            if (mg_url_is_ssl(s_backend_url)) {
-                struct mg_tls_opts opts = {.ca = "ca.pem"};
-                mg_tls_init(c2, &opts);
-            }
-            c->fn_data = c2;
-            forward_request(hm, c2);
-            c2->is_hexdumping = 1;
-        }
-    } else if (ev == MG_EV_CLOSE) {
-        if (c2 != NULL) c2->is_closing = 1;
-        if (c2 != NULL) c2->fn_data = NULL;
-    }
-}*/
+
 
 
 
@@ -2082,8 +2065,8 @@ static void handle_request(struct mg_connection *c, int ev, void *ev_data, void 
 
         struct mg_str *method = &hm->method;
         //struct mg_str *uri = &hm->uri;
-        struct mg_str *dest_uri;
-        struct mg_http_header headers[max];
+        struct mg_str *dest_uri = NULL;
+
 
 
         struct mg_str *accept = NULL;
@@ -2091,8 +2074,10 @@ static void handle_request(struct mg_connection *c, int ev, void *ev_data, void 
             struct mg_str *k = &hm->headers[i].name, *v = &hm->headers[i].value;
             if (mg_strcmp(*k, mg_str("Dest-Uri")) == 0) dest_uri = v;
             else{
+                /*
                 headers[i].name = hm->headers[i].name;
                 headers[i].value = hm->headers[i].value;
+                 */
             }
         }
 
@@ -2118,14 +2103,17 @@ static void handle_request(struct mg_connection *c, int ev, void *ev_data, void 
         }
         def_uri[uri->len] = '\0';
         */
-
         char def_dest_uri [dest_uri->len +1];
-        char *ptr = dest_uri->ptr;
-        def_dest_uri[0] = *(dest_uri->ptr);
-        for (int j = 1; j < dest_uri->len; j++){
-            def_dest_uri[j] = *(++ptr);
+        if(dest_uri != NULL || dest_uri->len > 0){
+
+            char *ptr = dest_uri->ptr;
+            def_dest_uri[0] = *(dest_uri->ptr);
+            for (int j = 1; j < dest_uri->len; j++){
+                def_dest_uri[j] = *(++ptr);
+            }
+            def_dest_uri[dest_uri->len] = '\0';
         }
-        def_dest_uri[dest_uri->len] = '\0';
+
 
         char def_method [method->len + 1];
         char *m_ptr = method->ptr;
@@ -2141,74 +2129,93 @@ static void handle_request(struct mg_connection *c, int ev, void *ev_data, void 
 
         //coap_pdu_t *received_response2 = malloc(sizeof(received_response));
         //coap_pdu_t *sendRequest = malloc(sizeof(received_response));
+        if(dest_uri != NULL && dest_uri->len > 0){
+            //struct mg_http_header  *headersPtr = hm->headers;
+            main_coap_client(def_dest_uri, def_method, body, hm,received_response);
 
-        main_coap_client(def_dest_uri, def_method, body, headers,received_response);
-
-        size_t len;
-        const uint8_t *databuf;
-        size_t offset;
-        size_t total;
-
-
-        char * response_phrase =  coap_response_phrase(response_code);
-        int response_class = COAP_RESPONSE_CLASS(response_code);
+            size_t len;
+            const uint8_t *databuf;
+            size_t offset;
+            size_t total;
 
 
-
-
-        //coap_opt_iterator_t opt_iter;
-        //coap_opt_t *opt = coap_check_option(received_response, COAP_OPTION_URI_PATH, &opt_iter);
+            char * response_phrase =  coap_response_phrase(response_code);
+            int response_class = COAP_RESPONSE_CLASS(response_code);
 
 
 
-        coap_get_data_large(received_response, &len, &databuf, &offset, &total);
-        /*TODO pasar codigo respuesta de coap a http y Content-Type*/
 
-        int HTTPCode;
-        switch(response_class) {
-            case 2:
-                if (strcmp(response_phrase, "Created") == 0) {
-                    HTTPCode = 201;
-                } else if (strcmp(response_phrase, "Valid") == 0){
-                    HTTPCode = 202;
-                } else {
-                    HTTPCode = 200;
+            //coap_opt_iterator_t opt_iter;
+            //coap_opt_t *opt = coap_check_option(received_response, COAP_OPTION_URI_PATH, &opt_iter);
+
+
+
+            coap_get_data_large(received_response, &len, &databuf, &offset, &total);
+            /*TODO pasar codigo respuesta de coap a http y Content-Type*/
+
+            int HTTPCode;
+            switch(response_class) {
+                case 2:
+                    if (strcmp(response_phrase, "Created") == 0) {
+                        HTTPCode = 201;
+                    } else if (strcmp(response_phrase, "Valid") == 0){
+                        HTTPCode = 202;
+                    } else {
+                        HTTPCode = 200;
+                    }
+                    break;
+                case 4:
+                    if (strcmp(response_phrase, "Unauthorized") == 0) {
+                        HTTPCode = 401;
+                    } else if (strcmp(response_phrase, "Forbidden") == 0){
+                        HTTPCode = 403;
+                    } else if (strcmp(response_phrase, "Not Found") == 0){
+                        HTTPCode = 404;
+                    } else if (strcmp(response_phrase, "Method Not Allowed") == 0){
+                        HTTPCode = 405;
+                    } else if (strcmp(response_phrase, "Not Acceptable") == 0){
+                        HTTPCode = 406;
+                    }  else {
+                        HTTPCode = 400;
+                    }
+                    break;
+                case 5:
+                    if (strcmp(response_phrase, "Not Implemented") == 0) {
+                        HTTPCode = 501;
+                    } else if (strcmp(response_phrase, "Bad Gateway") == 0){
+                        HTTPCode = 502;
+                    } else if (strcmp(response_phrase, "Service Unavailable") == 0){
+                        HTTPCode = 503;
+                    } else if (strcmp(response_phrase, "Gateway Timeout") == 0){
+                        HTTPCode = 504;
+                    } else if (strcmp(response_phrase, "Proxying Not Supported") == 0){
+                        HTTPCode = 505;
+                    }  else if (strcmp(response_phrase, "Hop Limit Reached") == 0){
+                        HTTPCode = 508;
+                    } else {
+                        HTTPCode = 500;
+                    }
+                    break;
+            }
+            if (payloadHTTP != NULL) {
+                strcat(payloadHTTP, "\n\r");
+                mg_http_reply(c, HTTPCode, HTTPheaders, payloadHTTP);
+            }else{
+                if(response_class == 2){
+                    mg_http_reply(c, HTTPCode, HTTPheaders,"%d. %s \n\r", HTTPCode, response_phrase);
+                }else{
+
+                    mg_http_reply(c, HTTPCode, HTTPheaders,"%d. %s \n\r", HTTPCode, response_phrase);
                 }
-               break;
-            case 4:
-                if (strcmp(response_phrase, "Unauthorized") == 0) {
-                    HTTPCode = 401;
-                } else if (strcmp(response_phrase, "Forbidden") == 0){
-                    HTTPCode = 403;
-                } else if (strcmp(response_phrase, "Not Found") == 0){
-                    HTTPCode = 404;
-                } else if (strcmp(response_phrase, "Method Not Allowed") == 0){
-                    HTTPCode = 405;
-                } else if (strcmp(response_phrase, "Not Acceptable") == 0){
-                    HTTPCode = 406;
-                }  else {
-                    HTTPCode = 400;
-                }
-                break;
-            case 5:
-                if (strcmp(response_phrase, "Not Implemented") == 0) {
-                    HTTPCode = 501;
-                } else if (strcmp(response_phrase, "Bad Gateway") == 0){
-                    HTTPCode = 502;
-                } else if (strcmp(response_phrase, "Service Unavailable") == 0){
-                    HTTPCode = 503;
-                } else if (strcmp(response_phrase, "Gateway Timeout") == 0){
-                    HTTPCode = 504;
-                } else if (strcmp(response_phrase, "Proxying Not Supported") == 0){
-                    HTTPCode = 505;
-                }  else if (strcmp(response_phrase, "Hop Limit Reached") == 0){
-                    HTTPCode = 508;
-                } else {
-                    HTTPCode = 500;
-                }
-                break;
+
+            }
+        }else{
+            mg_http_reply(c, 404, HTTPheaders,"404 Bad request. Dest-Uri header is not set or its length is 0");
         }
-        mg_http_reply(c, HTTPCode, HTTPheaders,  payloadHTTP);
+
+
+        memset(HTTPheaders,0,sizeof(HTTPheaders));
+
 
 
     }else if (ev == MG_EV_CLOSE) {
