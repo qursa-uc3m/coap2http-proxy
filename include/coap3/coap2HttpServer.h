@@ -1,8 +1,0 @@
-//
-// Created by rodri on 24/04/23.
-//
-
-#ifndef LIBCOAP_COAP2HTTPSERVER_H
-#define LIBCOAP_COAP2HTTPSERVER_H
-
-#endif //LIBCOAP_COAP2HTTPSERVER_H
