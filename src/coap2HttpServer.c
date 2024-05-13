@@ -1331,8 +1331,7 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
          */
         goto cleanup;
     } else {
-
-
+        
         /*Mapeamos y enviamos la peticion al servidor http*/
         struct memory chunk = {0};
         CURL *curl;
@@ -1349,23 +1348,21 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
             }
             host[uri.host.length] = '\0';
 
-            char aux[] = "http://";
-            strcat(aux, host);
-            char *host2 = aux;
+            char aux[1024] = "http://";
+            strncat(aux, host, sizeof(aux) - strlen(aux) - 1);
 
-
-            /* Si hay path*/
-            if (uri.path.length != 0) {
-                char path[uri.path.length + 1];
-                char *ptr2 = uri.path.s;
-                path[0] = *(uri.path.s);
-                for (int j = 1; j < uri.path.length; j++) {
-                    path[j] = *(++ptr2);
-                }
-                path[uri.path.length] = '\0';
-                strcat(host2, "/");
-                strcat(host2, path);
+            if (uri.port != 0) {
+                char port_str[10];
+                snprintf(port_str, sizeof(port_str), ":%d", uri.port);
+                strncat(aux, port_str, sizeof(aux) - strlen(aux) - 1);
             }
+
+            if (uri.path.length != 0) {
+                strcat(aux, "/");
+                strncat(aux, uri.path.s, uri.path.length);
+            }
+
+            char *host2 = aux;
 
             /* Metodo de la peticion */
             char *method;

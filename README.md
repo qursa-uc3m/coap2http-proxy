@@ -32,8 +32,10 @@ First ensure the HTTP server is running. Then run the proxy with the following c
  ./build/coap2HttpServer -P ",my_proxy"
 ```
 
-And then run the coap client
+And then run the coap client. For example
 
 ```bash
-.<path_to_coap_client>/coap-client -P coap://[::1] -m get http://127.0.0.1:6065/random_number/5
+.<path_to_coap_client>/coap-client -P coap://[::1] -m get http://localhost:8080
 ```
+
+will send a GET request to the HTTP server at `localhost:8080` through the proxy.
