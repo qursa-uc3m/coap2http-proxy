@@ -6,7 +6,7 @@ This is a fork of [https://github.com/Rodriferli/libcoap-proxy-TFG](https://gith
 
 ### libcoap
 
-The proxy works with libcoap v4.3.1
+The proxy works with libcoap latest version
 
 First install libcoap
 

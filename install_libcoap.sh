@@ -3,7 +3,7 @@
 build_dir="$(pwd)/libcoap/build"
 install_mode="default"
 
-git clone -b v4.3.1 --depth 1 https://github.com/obgm/libcoap
+git clone https://github.com/obgm/libcoap
 cd libcoap
 
 if [ "$install_mode" == "default" ]; then
