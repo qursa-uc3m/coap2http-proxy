@@ -1341,7 +1341,7 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
         struct curl_slist *optionsToHeaders = NULL;
         if(curl) {
             char host[uri.host.length + 1];
-            char *ptr = uri.host.s;
+            const char *ptr = uri.host.s;
             host[0] = *(uri.host.s);
             for (int j = 1; j < uri.host.length; j++) {
                 host[j] = *(++ptr);
@@ -1430,7 +1430,7 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
                     break;
             }
 
-            uint8_t *currentValue;
+            const uint8_t *currentValue;
             coap_opt_t *current_opt = coap_check_option(request,COAP_OPTION_MAXAGE, &opt_iter);
             if (current_opt != NULL){
                 currentValue = coap_opt_value(current_opt);
@@ -1446,7 +1446,7 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
             coap_opt_iterator_t opt_iter2;
             coap_opt_t *current_opt2 = coap_check_option(request,COAP_OPTION_ACCEPT, &opt_iter2);
             if (current_opt2 != NULL){
-                uint8_t *currentValue2 = coap_opt_value(current_opt2);
+                const uint8_t *currentValue2 = coap_opt_value(current_opt2);
                 uint32_t opt_len = coap_opt_length(current_opt2);
                 int value = (char)*currentValue2;
 
@@ -1460,7 +1460,7 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
             coap_opt_iterator_t opt_iter3;
             coap_opt_t *current_opt3 = coap_check_option(request,COAP_OPTION_ACCEPT, &opt_iter2);
             if (current_opt3 != NULL){
-                uint8_t *currentValue3 = coap_opt_value(current_opt3);
+                const uint8_t *currentValue3 = coap_opt_value(current_opt3);
                 uint32_t opt_len = coap_opt_length(current_opt3);
                 int value = (char)*currentValue3;
 
@@ -1502,7 +1502,7 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
                 res = curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &contentType);
                 if(contentType != NULL){
                     cmdline_content_type(contentType, COAP_OPTION_CONTENT_FORMAT);
-                    coap_add_optlist_pdu(response,optlistResponse);
+                    coap_add_optlist_pdu(response,&optlistResponse);
                 }
 
             }
