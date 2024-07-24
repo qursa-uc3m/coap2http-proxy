@@ -7,6 +7,7 @@ apt-get install -y autoconf automake libtool coreutils bsdmainutils
 
 git clone https://github.com/wolfSSL/wolfssl.git
 cd wolfssl
+git checkout v5.7.0-stable
 ./autogen.sh
 
 mkdir build
@@ -19,7 +20,7 @@ if [ "$install_mode" == "default" ]; then
         --enable-experimental \
         --enable-dtls-frag-ch \
         --with-liboqs \
-        --disable-rpk # Important to disable this to work with certificates
+        --disable-rpk
 else
     # after this fix https://github.com/obgm/libcoap/pull/1407
     # thiss build also works
@@ -43,4 +44,4 @@ else
 fi
 
 make all
- make install
+make install
