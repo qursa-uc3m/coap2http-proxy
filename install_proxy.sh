@@ -3,7 +3,7 @@
 LIBCOAP_PATH="${1}"
 build_dir="$(pwd)/build"
 
-sudo apt-get update && sudo apt-get install libcurl4-openssl-dev
+apt-get update &&  apt-get install libcurl4-openssl-dev
 
 mkdir -p $build_dir
 cd $build_dir
