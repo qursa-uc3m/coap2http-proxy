@@ -1,47 +1,57 @@
 #!/bin/bash
+#
+# install_wolfssl.sh — Build & install wolfSSL for the CoAP-to-HTTP proxy
+#
+# Environment variables (all optional):
+#   WOLFSSL_VERSION   Tag to checkout  (default: v5.8.2-stable)
+#   PQC_BACKEND       "builtin" | "liboqs" | "none"  (default: builtin)
+#
+# "builtin"  — uses wolfSSL's native ML-KEM (FIPS 203), no liboqs needed
+# "liboqs"   — links against a pre-installed liboqs (legacy KYBER naming)
+# "none"     — no post-quantum key exchange
+#
 
-install_mode="default"
+set -e
+
+WOLFSSL_VERSION="${WOLFSSL_VERSION:-v5.8.2-stable}"
+PQC_BACKEND="${PQC_BACKEND:-builtin}"
 
 apt-get update
 apt-get install -y autoconf automake libtool coreutils bsdmainutils
 
 git clone https://github.com/wolfSSL/wolfssl.git
 cd wolfssl
-git checkout v5.7.0-stable
+git checkout "${WOLFSSL_VERSION}"
 ./autogen.sh
 
 mkdir build
 cd build
 
-if [ "$install_mode" == "default" ]; then
-    ../configure --enable-all  \
-        --enable-dtls  \
-        --enable-dtls13  \
-        --enable-experimental \
-        --enable-dtls-frag-ch \
-        --with-liboqs \
-        --disable-rpk
-else
-    # after this fix https://github.com/obgm/libcoap/pull/1407
-    # thiss build also works
-    ../configure CFLAGS="-DHAVE_SECRET_CALLBACK" \
-        --enable-opensslall \
-        --enable-opensslextra \
-        --enable-static \
-        --enable-psk \
-        --enable-alpn \
-        --enable-aesccm \
-        --enable-aesgcm \
-        --enable-dtls-mtu \
-        --enable-context-extra-user-data=yes \
-        --enable-dtls \
-        --enable-debug \
-        --enable-dtls13 \
-        --enable-tls13 \
-        --enable-experimental \
-        --with-liboqs \
-        --enable-dtls-frag-ch
-fi
+COMMON_FLAGS="--enable-all \
+    --enable-dtls \
+    --enable-dtls13 \
+    --enable-experimental \
+    --enable-dtls-frag-ch \
+    --disable-rpk"
+
+case "${PQC_BACKEND}" in
+    builtin)
+        echo ">>> wolfSSL ${WOLFSSL_VERSION}: built-in ML-KEM (no liboqs)"
+        ../configure ${COMMON_FLAGS} --enable-mlkem
+        ;;
+    liboqs)
+        echo ">>> wolfSSL ${WOLFSSL_VERSION}: PQC via liboqs"
+        ../configure ${COMMON_FLAGS} --with-liboqs
+        ;;
+    none)
+        echo ">>> wolfSSL ${WOLFSSL_VERSION}: no PQC"
+        ../configure ${COMMON_FLAGS}
+        ;;
+    *)
+        echo "ERROR: unknown PQC_BACKEND='${PQC_BACKEND}' (use builtin|liboqs|none)" >&2
+        exit 1
+        ;;
+esac
 
 make all
 make install
