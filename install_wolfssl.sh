@@ -6,7 +6,7 @@
 #   WOLFSSL_VERSION   Tag to checkout  (default: v5.8.2-stable)
 #   PQC_BACKEND       "builtin" | "liboqs" | "none"  (default: builtin)
 #
-# "builtin"  — uses wolfSSL's native ML-KEM (FIPS 203), no liboqs needed
+# "builtin"  — uses wolfSSL's native ML-KEM (FIPS 203) + ML-DSA, no liboqs needed
 # "liboqs"   — links against a pre-installed liboqs (legacy KYBER naming)
 # "none"     — no post-quantum key exchange
 #
@@ -36,8 +36,8 @@ COMMON_FLAGS="--enable-all \
 
 case "${PQC_BACKEND}" in
     builtin)
-        echo ">>> wolfSSL ${WOLFSSL_VERSION}: built-in ML-KEM (no liboqs)"
-        ../configure ${COMMON_FLAGS} --enable-mlkem
+        echo ">>> wolfSSL ${WOLFSSL_VERSION}: built-in ML-KEM + ML-DSA (no liboqs)"
+        ../configure ${COMMON_FLAGS} --enable-mlkem --enable-dilithium
         ;;
     liboqs)
         echo ">>> wolfSSL ${WOLFSSL_VERSION}: PQC via liboqs"
